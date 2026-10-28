@@ -300,7 +300,22 @@
       font-weight: 700;
     }
     .best-feedback { margin-bottom: 0; }
-    .result-actions { display: flex; justify-content: center; margin-top: 24px; }
+    .result-actions { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
+    .review-score { margin-bottom: 20px; color: var(--muted); }
+    .review-list { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; text-align: left; }
+    .review-item {
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: var(--surface-2);
+    }
+    .review-item h2 { margin-bottom: 14px; font-size: 18px; }
+    .review-item p { margin-bottom: 8px; color: var(--muted); }
+    .review-item p:last-child { margin-bottom: 0; }
+    .review-item strong { color: var(--text); }
+    .review-result { font-weight: 750; }
+    .review-result.good { color: var(--success); }
+    .review-result.bad { color: var(--danger); }
     .sr-only {
       position: absolute;
       width: 1px;
@@ -368,6 +383,7 @@
     let current = 0;
     let score = 0;
     let answered = false;
+    let selectedAnswers = [];
 
     function loadPersonalBest() {
       try {
@@ -407,6 +423,7 @@
       document.querySelector("#start").addEventListener("click", () => {
         current = 0;
         score = 0;
+        selectedAnswers = [];
         renderQuestion();
       });
     }
@@ -449,6 +466,7 @@
         answered = true;
         const selected = Number(button.dataset.index);
         const correct = selected === item.correct;
+        selectedAnswers[current] = selected;
         choices.forEach((choice, index) => {
           choice.disabled = true;
           if (index === item.correct) choice.classList.add("correct");
@@ -501,11 +519,52 @@
           <p>correct answers</p>
           <p class="personal-best">Personal best: ${personalBest === null ? "Unavailable" : `${personalBest} / ${questions.length}`}</p>
           <p class="best-feedback" role="status">${isNewBest ? "New personal best saved!" : saveFailed ? "Your score is shown, but this browser could not save your new personal best." : personalBest === null ? "Your score is shown, but this browser could not save a personal best." : "Keep exploring to beat your personal best."}</p>
-          <div class="result-actions"><button class="button" id="restart">Explore again <span aria-hidden="true">↻</span></button></div>
+          <div class="result-actions">
+            ${score < questions.length ? '<button class="button secondary" id="review">Review answers</button>' : ""}
+            <button class="button" id="restart">Explore again <span aria-hidden="true">↻</span></button>
+          </div>
         </div>`;
+      if (score < questions.length) {
+        document.querySelector("#review").addEventListener("click", renderReview);
+      }
       document.querySelector("#restart").addEventListener("click", () => {
         current = 0;
         score = 0;
+        selectedAnswers = [];
+        renderQuestion();
+      });
+    }
+
+    function renderReview() {
+      app.innerHTML = `
+        <div class="card-content">
+          <p class="eyebrow">Mission review</p>
+          <h1>Review your answers</h1>
+          <p class="review-score">You scored <strong>${score} of ${questions.length}</strong>. Here is how you answered each question.</p>
+          <ol class="review-list">
+            ${questions.map((item, index) => {
+              const selected = selectedAnswers[index];
+              const isCorrect = selected === item.correct;
+              return `
+                <li class="review-item">
+                  <h2>${index + 1}. ${item.question}</h2>
+                  <p class="review-result ${isCorrect ? "good" : "bad"}">${isCorrect ? "Correct" : "Incorrect"}</p>
+                  <p><strong>Your answer:</strong> ${item.answers[selected]}</p>
+                  <p><strong>Correct answer:</strong> ${item.answers[item.correct]}</p>
+                  <p><strong>Explanation:</strong> ${item.fact}</p>
+                </li>`;
+            }).join("")}
+          </ol>
+          <div class="result-actions">
+            <button class="button secondary" id="back-to-results">Back to results</button>
+            <button class="button" id="review-restart">Explore again <span aria-hidden="true">↻</span></button>
+          </div>
+        </div>`;
+      document.querySelector("#back-to-results").addEventListener("click", renderResults);
+      document.querySelector("#review-restart").addEventListener("click", () => {
+        current = 0;
+        score = 0;
+        selectedAnswers = [];
         renderQuestion();
       });
     }
