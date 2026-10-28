@@ -291,6 +291,15 @@
       font-weight: 850;
       letter-spacing: -.06em;
     }
+    .personal-best {
+      margin: 20px 0 8px;
+      padding: 12px 16px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--surface-2);
+      font-weight: 700;
+    }
+    .best-feedback { margin-bottom: 0; }
     .result-actions { display: flex; justify-content: center; margin-top: 24px; }
     .sr-only {
       position: absolute;
@@ -355,9 +364,33 @@
     ];
 
     const app = document.querySelector("#app");
+    const personalBestKey = "orbit-academy-personal-best";
     let current = 0;
     let score = 0;
     let answered = false;
+
+    function loadPersonalBest() {
+      try {
+        const saved = localStorage.getItem(personalBestKey);
+        if (saved === null) return { available: true, score: null };
+        const best = Number(saved);
+        return {
+          available: true,
+          score: Number.isInteger(best) && best >= 0 && best <= questions.length ? best : null
+        };
+      } catch {
+        return { available: false, score: null };
+      }
+    }
+
+    function savePersonalBest(best) {
+      try {
+        localStorage.setItem(personalBestKey, String(best));
+        return true;
+      } catch {
+        return false;
+      }
+    }
 
     function renderIntro() {
       app.innerHTML = `
@@ -441,6 +474,15 @@
     }
 
     function renderResults() {
+      const storedBest = loadPersonalBest();
+      let personalBest = storedBest.score;
+      let isNewBest = false;
+      let saveFailed = false;
+      if (storedBest.available && (personalBest === null || score > personalBest)) {
+        isNewBest = savePersonalBest(score);
+        saveFailed = !isNewBest;
+        if (isNewBest) personalBest = score;
+      }
       const percent = score / questions.length;
       const result = percent === 1
         ? { emoji: "🏆", title: "Out of this world!", text: "A perfect mission. You really know your way around the cosmos." }
@@ -457,6 +499,8 @@
           <p>${result.text}</p>
           <div class="result-score">${score}<span style="font-size:24px;color:var(--muted)"> / ${questions.length}</span></div>
           <p>correct answers</p>
+          <p class="personal-best">Personal best: ${personalBest === null ? "Unavailable" : `${personalBest} / ${questions.length}`}</p>
+          <p class="best-feedback" role="status">${isNewBest ? "New personal best saved!" : saveFailed ? "Your score is shown, but this browser could not save your new personal best." : personalBest === null ? "Your score is shown, but this browser could not save a personal best." : "Keep exploring to beat your personal best."}</p>
           <div class="result-actions"><button class="button" id="restart">Explore again <span aria-hidden="true">↻</span></button></div>
         </div>`;
       document.querySelector("#restart").addEventListener("click", () => {
